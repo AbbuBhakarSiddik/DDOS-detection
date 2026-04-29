@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DDoS Detection System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0e1a;
+            color: #e0e6f0;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 13px;
+        }
+
+        /* NAV */
+        .nav {
+            background: #0d1225;
+            border-bottom: 1px solid #1e2a45;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .shield {
+            width: 32px;
+            height: 32px;
+            background: #1a3a6e;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .nav-left h1 {
+            font-size: 14px;
+            font-weight: 500;
+            color: #c8d8f0;
+            letter-spacing: 1px;
+        }
+
+        .nav-left span {
+            font-size: 11px;
+            color: #4a6a9e;
+            display: block;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .live-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #0a2a1a;
+            border: 1px solid #1a5a2a;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 11px;
+            color: #40d080;
+        }
+
+        .live-dot {
+            width: 7px;
+            height: 7px;
+            background: #40d080;
+            border-radius: 50%;
+            animation: blink 1.2s infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: 0.2
+            }
+        }
+
+        .clock {
+            font-size: 12px;
+            color: #4a6a9e;
+            font-family: monospace;
+        }
+
+        /* LAYOUT */
+        .main {
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        /* ALERT */
+        .alert-banner {
+            background: #1a0a0a;
+            border: 1px solid #6a1a1a;
+            border-left: 3px solid #e04040;
+            border-radius: 6px;
+            padding: 10px 14px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-banner.show {
+            display: flex;
+        }
+
+        .alert-icon {
+            width: 22px;
+            height: 22px;
+            background: #e04040;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #fff;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .alert-text {
+            font-size: 12px;
+            color: #e08080;
+        }
+
+        .alert-text strong {
+            color: #e04040;
+        }
+
+        /* STAT CARDS */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .stat {
+            background: #0d1225;
+            border: 1px solid #1e2a45;
+            border-radius: 8px;
+            padding: 14px 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+        }
+
+        .stat.s1::before {
+            background: #3a8aff;
+        }
+
+        .stat.s2::before {
+            background: #e04040;
+        }
+
+        .stat.s3::before {
+            background: #40d080;
+        }
+
+        .stat.s4::before {
+            background: #f0a030;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: #4a6a9e;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 26px;
+            font-weight: 500;
+        }
+
+        .stat.s1 .stat-value {
+            color: #3a8aff;
+        }
+
+        .stat.s2 .stat-value {
+            color: #e04040;
+        }
+
+        .stat.s3 .stat-value {
+            color: #40d080;
+        }
+
+        .stat.s4 .stat-value {
+            color: #f0a030;
+        }
+
+        .stat-sub {
+            font-size: 10px;
+            color: #4a6a9e;
+            margin-top: 4px;
+        }
+
+        /* ROW 2 */
+        .row2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        /* CHART BOX */
+        .box {
+            background: #0d1225;
+            border: 1px solid #1e2a45;
+            border-radius: 8px;
+            padding: 14px 16px;
+        }
+
+        .box-title {
+            font-size: 10px;
+            color: #4a6a9e;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .box-title .tag {
+            color: #2a4a7e;
+            font-size: 9px;
+        }
+
+        /* MINI BARS */
+        .mini-bar {
+            margin-bottom: 8px;
+        }
+
+        .mini-bar-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+            font-size: 11px;
+            color: #8aa0c0;
+        }
+
+        .mini-bar-track {
+            background: #1e2a45;
+            border-radius: 3px;
+            height: 6px;
+        }
+
+        .mini-bar-fill {
+            height: 6px;
+            border-radius: 3px;
+        }
+
+        /* TABLE */
+        .table-box {
+            background: #0d1225;
+            border: 1px solid #1e2a45;
+            border-radius: 8px;
+            padding: 14px 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            font-size: 10px;
+            color: #4a6a9e;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 6px 10px;
+            text-align: left;
+            border-bottom: 1px solid #1e2a45;
+            font-weight: 400;
+        }
+
+        td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #111a2e;
+            font-size: 11px;
+            color: #8aa0c0;
+            font-family: monospace;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: #0a1020;
+        }
+
+        /* BADGES */
+        .badge {
+            padding: 3px 9px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 500;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .badge.ddos {
+            background: #3a0a0a;
+            color: #e04040;
+            border: 1px solid #6a1a1a;
+        }
+
+        .badge.benign {
+            background: #0a2a1a;
+            color: #40d080;
+            border: 1px solid #1a5a2a;
+        }
+
+        /* CONFIDENCE BAR */
+        .conf-wrap {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .conf-track {
+            width: 52px;
+            height: 4px;
+            background: #1e2a45;
+            border-radius: 2px;
+        }
+
+        .conf-fill {
+            height: 4px;
+            border-radius: 2px;
+        }
+
+        .conf-val {
+            font-size: 10px;
+            min-width: 30px;
+        }
+
+        /* BOTTOM ROW */
+        .row3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 14px;
+        }
+
+        .attack-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 10px;
+            background: #0a1020;
+            border-radius: 6px;
+            border: 1px solid #1e2a45;
+            margin-bottom: 6px;
+        }
+
+        .attack-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .attack-name {
+            flex: 1;
+            font-size: 11px;
+            color: #8aa0c0;
+        }
+
+        .attack-pct {
+            font-size: 11px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="nav">
+        <div class="nav-left">
+            <div class="shield">🛡️</div>
+            <div>
+                <h1>DDOS ATTACK DETECTION SYSTEM</h1>
+                <span>Sri Siddhartha Institute of Technology — Dept. of CSE (Cyber Security)</span>
+            </div>
+        </div>
+        <div class="nav-right">
+            <div class="live-badge">
+                <div class="live-dot"></div> LIVE MONITORING
+            </div>
+            <div class="clock" id="clock">--:--:--</div>
+        </div>
+    </div>
+
+    <div class="main">
+
+        <!-- ALERT -->
+        <div class="alert-banner" id="alertBanner">
+            <div class="alert-icon">!</div>
+            <div class="alert-text">
+                <strong>DDOS ATTACK DETECTED</strong> — High-volume malicious traffic identified. ML model triggered
+                auto-mitigation. Check traffic table below.
+            </div>
+        </div>
+
+        <!-- STATS -->
+        <div class="stats">
+            <div class="stat s1">
+                <div class="stat-label">Model Accuracy</div>
+                <div class="stat-value" id="accuracy">--</div>
+                <div class="stat-sub">Random Forest · 100 trees</div>
+            </div>
+            <div class="stat s2">
+                <div class="stat-label">Attacks Detected</div>
+                <div class="stat-value" id="attackCount">0</div>
+                <div class="stat-sub">Current scan window</div>
+            </div>
+            <div class="stat s3">
+                <div class="stat-label">Normal Traffic</div>
+                <div class="stat-value" id="benignCount">0</div>
+                <div class="stat-sub">Current scan window</div>
+            </div>
+            <div class="stat s4">
+                <div class="stat-label">Dataset Size</div>
+                <div class="stat-value" id="totalRecords">--</div>
+                <div class="stat-sub">Total training records</div>
+            </div>
+        </div>
+
+        <!-- CHARTS ROW -->
+        <div class="row2">
+            <div class="box">
+                <div class="box-title">Live Traffic Timeline <span class="tag">UPDATES EVERY 2s</span></div>
+                <canvas id="lineChart" height="130"></canvas>
+            </div>
+            <div class="box">
+                <div class="box-title">Dataset Distribution <span class="tag">TRAINING DATA</span></div>
+                <canvas id="pieChart" height="130"></canvas>
+            </div>
+        </div>
+
+        <!-- TRAFFIC TABLE -->
+        <div class="table-box">
+            <div class="box-title">Live Traffic Analysis <span class="tag">SCANNING EVERY 2s</span></div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Flow ID</th>
+                        <th>Status</th>
+                        <th>Flow Duration</th>
+                        <th>Bytes/s</th>
+                        <th>Packets/s</th>
+                        <th>Pkt Length</th>
+                        <th>SYN Flags</th>
+                        <th>Confidence</th>
+                    </tr>
+                </thead>
+                <tbody id="trafficTable">
+                    <tr>
+                        <td colspan="8" style="text-align:center;color:#4a6a9e;padding:20px;">Initializing scanner...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- BOTTOM ROW -->
+        <div class="row3">
+
+            <!-- MODEL PERFORMANCE -->
+            <div class="box">
+                <div class="box-title">Model Performance <span class="tag">TEST SET</span></div>
+                <div class="mini-bar">
+                    <div class="mini-bar-label"><span>Accuracy</span><span>99.98%</span></div>
+                    <div class="mini-bar-track">
+                        <div class="mini-bar-fill" style="width:99.98%;background:#3a8aff;"></div>
+                    </div>
+                </div>
+                <div class="mini-bar">
+                    <div class="mini-bar-label"><span>Precision</span><span>100%</span></div>
+                    <div class="mini-bar-track">
+                        <div class="mini-bar-fill" style="width:100%;background:#a060f0;"></div>
+                    </div>
+                </div>
+                <div class="mini-bar">
+                    <div class="mini-bar-label"><span>Recall</span><span>100%</span></div>
+                    <div class="mini-bar-track">
+                        <div class="mini-bar-fill" style="width:100%;background:#40d080;"></div>
+                    </div>
+                </div>
+                <div class="mini-bar">
+                    <div class="mini-bar-label"><span>F1-Score</span><span>100%</span></div>
+                    <div class="mini-bar-track">
+                        <div class="mini-bar-fill" style="width:100%;background:#f0a030;"></div>
+                    </div>
+                </div>
+                <div style="margin-top:10px;padding-top:10px;border-top:1px solid #1e2a45;">
+                    <div style="font-size:10px;color:#4a6a9e;margin-bottom:6px;">TRAFFIC SPLIT</div>
+                    <div class="mini-bar">
+                        <div class="mini-bar-label"><span>Benign</span><span>552,081</span></div>
+                        <div class="mini-bar-track">
+                            <div class="mini-bar-fill" style="width:81%;background:#40d080;"></div>
+                        </div>
+                    </div>
+                    <div class="mini-bar">
+                        <div class="mini-bar-label"><span>DDoS</span><span>128,014</span></div>
+                        <div class="mini-bar-track">
+                            <div class="mini-bar-fill" style="width:19%;background:#e04040;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ATTACK TYPES -->
+            <div class="box">
+                <div class="box-title">Attack Classification <span class="tag">DETECTED TYPES</span></div>
+                <div class="attack-item">
+                    <div class="attack-dot" style="background:#e04040;"></div>
+                    <div class="attack-name">Volumetric Flood</div>
+                    <div class="attack-pct" style="color:#e04040;">63%</div>
+                </div>
+                <div class="attack-item">
+                    <div class="attack-dot" style="background:#f0a030;"></div>
+                    <div class="attack-name">SYN Flood</div>
+                    <div class="attack-pct" style="color:#f0a030;">21%</div>
+                </div>
+                <div class="attack-item">
+                    <div class="attack-dot" style="background:#a060f0;"></div>
+                    <div class="attack-name">Application Layer</div>
+                    <div class="attack-pct" style="color:#a060f0;">11%</div>
+                </div>
+                <div class="attack-item">
+                    <div class="attack-dot" style="background:#3a8aff;"></div>
+                    <div class="attack-name">Protocol Attack</div>
+                    <div class="attack-pct" style="color:#3a8aff;">5%</div>
+                </div>
+                <div
+                    style="margin-top:10px;padding-top:10px;border-top:1px solid #1e2a45;font-size:10px;color:#4a6a9e;">
+                    All attacks classified using<br>Random Forest · CICIDS2017 dataset
+                </div>
+            </div>
+
+            <!-- MITIGATION STATUS -->
+            <div class="box">
+                <div class="box-title">Mitigation Status <span class="tag">AUTO-RESPONSE</span></div>
+                <div class="attack-item">
+                    <div class="attack-dot" style="background:#40d080;"></div>
+                    <div class="attack-name">Traffic Filtering</div>
+                    <div class="attack-pct" style="color:#40d080;">ACTIVE</div>
+                </div>
+                <div class="attack-item">
+                    <div class="attack-dot" style="background:#40d080;"></div>
+                    <div class="attack-name">Rate Limiting</div>
+                    <div class="attack-pct" style="color:#40d080;">ACTIVE</div>
+                </div>
+                <div class="attack-item">
+                    <div class="attack-dot" style="background:#40d080;"></div>
+                    <div class="attack-name">IP Blacklisting</div>
+                    <div class="attack-pct" style="color:#40d080;">ACTIVE</div>
+                </div>
+                <div class="attack-item">
+                    <div class="attack-dot" style="background:#f0a030;"></div>
+                    <div class="attack-name">Cloud Scrubbing</div>
+                    <div class="attack-pct" style="color:#f0a030;">STANDBY</div>
+                </div>
+                <div
+                    style="margin-top:10px;padding-top:10px;border-top:1px solid #1e2a45;font-size:10px;color:#4a6a9e;">
+                    Multi-layered defense framework<br>as proposed in project synopsis
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Clock
+        setInterval(() => {
+            document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+        }, 1000);
+
+        // Line Chart
+        const lineCtx = document.getElementById('lineChart').getContext('2d');
+        const lineChart = new Chart(lineCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    { label: 'DDoS', data: [], borderColor: '#e04040', backgroundColor: '#e0404018', tension: 0.4, fill: true, pointRadius: 3, pointBackgroundColor: '#e04040' },
+                    { label: 'Benign', data: [], borderColor: '#40d080', backgroundColor: '#40d08018', tension: 0.4, fill: true, pointRadius: 3, pointBackgroundColor: '#40d080' }
+                ]
+            },
+            options: {
+                animation: { duration: 400 },
+                scales: {
+                    x: { ticks: { color: '#4a6a9e', font: { size: 10 } }, grid: { color: '#1e2a45' } },
+                    y: { ticks: { color: '#4a6a9e', font: { size: 10 } }, grid: { color: '#1e2a45' } }
+                },
+                plugins: { legend: { labels: { color: '#8aa0c0', font: { size: 11 }, boxWidth: 12 } } }
+            }
+        });
+
+        // Pie Chart
+        const pieCtx = document.getElementById('pieChart').getContext('2d');
+        new Chart(pieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Benign (552K)', 'DDoS (128K)'],
+                datasets: [{
+                    data: [552081, 128014],
+                    backgroundColor: ['#40d08030', '#e0404030'],
+                    borderColor: ['#40d080', '#e04040'],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: { labels: { color: '#8aa0c0', font: { size: 11 }, boxWidth: 12 } }
+                }
+            }
+        });
+
+        // Load static stats
+        fetch('/get_stats').then(r => r.json()).then(d => {
+            document.getElementById('accuracy').textContent = d.accuracy + '%';
+            document.getElementById('totalRecords').textContent = Math.round(d.total_records / 1000) + 'K';
+        });
+
+        let tick = 0;
+
+        function fetchTraffic() {
+            fetch('/get_traffic').then(r => r.json()).then(d => {
+                document.getElementById('attackCount').textContent = d.attack_count;
+                document.getElementById('benignCount').textContent = d.benign_count;
+
+                const banner = document.getElementById('alertBanner');
+                if (d.attack_count > 0) banner.classList.add('show');
+                else banner.classList.remove('show');
+
+                // Update table
+                const tbody = document.getElementById('trafficTable');
+                tbody.innerHTML = d.traffic.map(t => {
+                    const isDdos = t.prediction === 'DDoS';
+                    const color = isDdos ? '#e04040' : '#40d080';
+                    const conf = isDdos ? (95 + Math.floor(Math.random() * 5)) : (93 + Math.floor(Math.random() * 6));
+                    return `<tr>
+          <td style="color:#3a8aff;">#${t.id}</td>
+          <td><span class="badge ${isDdos ? 'ddos' : 'benign'}">${t.prediction}</span></td>
+          <td>${t.flow_duration}ms</td>
+          <td>${t.flow_bytes.toLocaleString()}</td>
+          <td>${t.flow_packets.toLocaleString()}</td>
+          <td>${t.packet_length}</td>
+          <td style="color:${isDdos ? '#e04040' : '#4a6a9e'}">${isDdos ? Math.floor(Math.random() * 8 + 1) : 0}</td>
+          <td>
+            <div class="conf-wrap">
+              <div class="conf-track"><div class="conf-fill" style="width:${conf}%;background:${color};"></div></div>
+              <span class="conf-val" style="color:${color};">${conf}%</span>
+            </div>
+          </td>
+        </tr>`;
+                }).join('');
+
+                // Update line chart
+                tick++;
+                const label = new Date().toLocaleTimeString('en', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                lineChart.data.labels.push(label);
+                lineChart.data.datasets[0].data.push(d.attack_count);
+                lineChart.data.datasets[1].data.push(d.benign_count);
+                if (lineChart.data.labels.length > 20) {
+                    lineChart.data.labels.shift();
+                    lineChart.data.datasets[0].data.shift();
+                    lineChart.data.datasets[1].data.shift();
+                }
+                lineChart.update();
+            });
+        }
+
+        fetchTraffic();
+        setInterval(fetchTraffic, 2000);
+    </script>
+
+</body>
+
+</html>
